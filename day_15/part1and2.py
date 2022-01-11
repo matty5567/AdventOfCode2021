@@ -21,6 +21,8 @@ class board:
         self.board = full_board
 
     def calc_heuristic_dist(self, position):
+
+        
         return np.sqrt((self.target[0] - position[0])**2 + (self.target[1] - position[1])**2)
 
     def A_star(self):
@@ -37,7 +39,6 @@ class board:
             
             curr_y, curr_x = sorted(options.items(), key=lambda item: item[1] + self.calc_heuristic_dist(item[0]))[0][0]
             curr_cost = options.pop((curr_y, curr_x))
-            print(options, curr_y, curr_x)
         print("shortest path is: ", curr_cost)
         return curr_cost
                 
