@@ -1,11 +1,12 @@
-
+from tqdm import tqdm
 import numpy as np
+from multiprocessing import Pool
 
 class Hotel:
     def __init__(self):
         self.costs = {}
-        self.positions = {"A1":(2, 2), "A2":(2, 8), "B1":(1, 2), "B2":(1, 6),
-                          "C1":(1, 4), "C2":(2, 6), "D1":(2, 4), "D2":(1, 8)}
+        self.positions = {"A1":(1, 4), "A2":(2, 4), "B1":(2, 2), "B2":(1, 6),
+                          "C1":(1, 2), "C2":(2, 8), "D1":(2, 6), "D2":(1, 8)}
 
 
         # self.positions = {"A1":(1, 2), "A2":(2, 2), "B1":(1, 4), "B2":(2, 4),
@@ -15,7 +16,7 @@ class Hotel:
         self.move_cost = {"A": 1, "B": 10, "C": 100, "D": 1000}
 
 
-        print(self.find_least_move_cost(self.positions, 0))
+        self.find_least_move_cost_seed(self.positions)
 
     def show_map(self, positions):
         hotel_map = np.empty((3, 11), dtype='object')
@@ -79,52 +80,51 @@ class Hotel:
 
 
     def legal_move(self, start, end, piece, positions):
-        legal = True
-        journey = self.calc_journey(start, end)
+
+        # once in hallway stays till can move into its room
+        if (start[0] == 0 and end[0] == 0):
+            return False, None
 
         # if piece in position, dont move it
         if start == (2, self.target_x[piece[0]]):
-                legal = False
+            return False, None
 
         if start == (1, self.target_x[piece[0]]) and positions[piece[0]+{"1":"2", "2": "1"}[piece[1]]] == (2, start[1]):
-            legal = False
+            return False, None
 
 
         if end[0] == 1 and (2, end[1]) not in positions.values():
-            legal = False
-
-        # piece in way
-        if [i for i in journey if i in positions.values()]:
-            legal = False
-            # print(piece, "piece in the way at: ", x, " from ", start, " to ", end)
+            return False, None
 
         # never stop outside room
         if end[0] == 0 and (1 < end[1] < 10) and (not end[1] % 2):
-            legal = False
+            return False, None
             # print("never stop outside room")
 
         # never stop in room unless theres and no other types inside
         if end[0] > 0:
             if end[1] != self.target_x[piece[0]]:
-                legal = False
+                return False, None
 
             # if piece of other type in room
             if [p for p, pos in positions.items() if pos[1]==end[1] and p[0]!=piece[0]]:
-                legal = False
-
-        # once in hallway stays till can move into its room
-        if start[0] == 0 and end[0] == 0:
-            legal = False
-
+                return False, None
 
         if (start[0], end[0]) in [(1, 2), (2, 1)]:
-            legal = False
+            return False, None
 
+        journey = self.calc_journey(start, end)
 
-        return legal, len(journey)*self.move_cost[piece[0]]
+        # piece in way
+        if [i for i in journey if i in positions.values()]:
+            return False, None
+            # print(piece, "piece in the way at: ", x, " from ", start, " to ", end)
+
+        return True, len(journey)*self.move_cost[piece[0]]
 
 
     def find_all_next_positions(self, positions):
+        
         moves = []
         end_locs = [(0, i) for i in range(11)] + [(j, k) for j in [1, 2] for k in [2, 4, 6, 8]]
         for piece, pos in positions.items():
@@ -142,31 +142,33 @@ class Hotel:
         pos[piece] = end
         return pos
 
+    def find_least_move_cost_seed(self, positions):
+        moves = self.find_all_next_positions(positions)
+        with Pool(10) as p:
+            costs = p.map(self.find_least_move_cost, [(pos, cost) for pos, cost in moves])
+        print(min(costs))
 
-    def find_least_move_cost(self, positions, cost):
-        if cost > 15000:
-            return 100000
+
+
+    def find_least_move_cost(self, x):
+        positions, cost = x
+        if cost > 13000:
+            return 13000
 
         if self.is_completed(positions):
-            print("found")
             return cost
 
         moves = self.find_all_next_positions(positions)
+
         if not moves:
-            return 100000
+            return 13000
             
-        return min([self.find_least_move_cost(pos, cost+c) for pos, c in moves])
+        return min([self.find_least_move_cost((pos, cost+c)) for pos, c in moves])
 
 
-import sys
-sys.setrecursionlimit(1500)
 
-
-hotel = Hotel()
-
-# print(hotel.legal_move((0, 10), (1, 8), "D2", {"A1":(1, 2), "A2":(2, 2), "B1":(1, 4), "B2":(2, 4),
-#                            "C1":(1, 6), "C2":(2, 6), "D1":(2, 8), "D2":(0, 10)}))
-
+if __name__ == '__main__':
+    hotel = Hotel()
 
 
 
