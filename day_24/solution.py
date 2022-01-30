@@ -44,11 +44,11 @@ def solve(digits, depth, prev_z, num):
     return None
 
 
-def part2():
+def part1():
     digits = range(9, -1, -1)
     print(solve(digits, 0, 0, 0))
 
-def part1():
+def part2():
     digits = range(0, 10, 1)
     print(solve(digits, 0, 0, 0))
 
